@@ -29,10 +29,11 @@ def handle_error(message, is_return_error):
         sys.exit(1)
 
 
-def predict_phishing_words(model_name, model_store_type, email_subject, email_body, min_text_length, label_threshold,
-                           word_threshold, top_word_limit, is_return_error):
+def predict_phishing_words(model_name, model_store_type, email_subject, email_body, min_text_length,
+                           label_threshold, word_threshold, top_word_limit, is_return_error):
     model_data = get_model_data(model_name, model_store_type, is_return_error)
-    model = demisto_ml.decode_model(model_data)
+    model_type = demisto_ml.infer_model_type(model_data)
+    model = demisto_ml.decode_model(model_data,model_type=model_type)
     text = "%s %s" % (email_subject, email_body)
     res = demisto.executeCommand('WordTokenizerNLP', {'value': text,
                                                       'hashWordWithSeed': demisto.args().get('hashSeed')})
@@ -41,7 +42,7 @@ def predict_phishing_words(model_name, model_store_type, email_subject, email_bo
     tokenized_text_result = res[0]['Contents']
     input_text = tokenized_text_result['hashedTokenizedText'] if tokenized_text_result.get('hashedTokenizedText') else \
         tokenized_text_result['tokenizedText']
-    filtered_text, filtered_text_number_of_words = demisto_ml.filter_model_words(input_text, model)
+    filtered_text, filtered_text_number_of_words = demisto_ml.filter_model_words(input_text, model,demisto_ml)
     if filtered_text_number_of_words == 0:
         handle_error("The model does not contains any of the input text words", is_return_error)
     if filtered_text_number_of_words < min_text_length:
@@ -51,7 +52,7 @@ def predict_phishing_words(model_name, model_store_type, email_subject, email_bo
                                                     input_text,
                                                     0,
                                                     word_threshold,
-                                                    top_word_limit)
+                                                    top_word_limit, model_type=model_type)
     if explain_result["Probability"] < label_threshold:
         handle_error("Label probability is {:.2f} and it's below the input threshold".format(
             explain_result["Probability"]), is_return_error)
@@ -103,15 +104,15 @@ def find_words_contain_tokens(positive_tokens, words_to_token_maps):
 
 
 if __name__ in ['__main__', '__builtin__', 'builtins']:
-    result = predict_phishing_words(demisto.args()['modelName'],
-                                    demisto.args()['modelStoreType'],
-                                    demisto.args().get('emailSubject', ''),
-                                    demisto.args().get('emailBody', ''),
-                                    int(demisto.args()['minTextLength']),
-                                    float(demisto.args().get("labelProbabilityThreshold", 0)),
-                                    float(demisto.args().get('wordThreshold', 0)),
-                                    int(demisto.args()['topWordsLimit']),
-                                    demisto.args()['returnError'] == 'true'
+    result = predict_phishing_words(model_name = demisto.args()['modelName'],
+                                    model_store_type = demisto.args()['modelStoreType'],
+                                    email_subject = demisto.args().get('emailSubject', ''),
+                                    email_body = demisto.args().get('emailBody', ''),
+                                    min_text_length = int(demisto.args()['minTextLength']),
+                                    label_threshold = float(demisto.args().get("labelProbabilityThreshold", 0)),
+                                    word_threshold = float(demisto.args().get('wordThreshold', 0)),
+                                    top_word_limit= int(demisto.args()['topWordsLimit']),
+                                    is_return_error = demisto.args()['returnError'] == 'true'
                                     )
 
     demisto.results(result)

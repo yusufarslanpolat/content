@@ -12,6 +12,15 @@ args:
   name: modelName
   required: false
   secret: false
+- name: modelType
+  required: true
+  default: true
+  auto: PREDEFINED
+  predefined:
+  - v1
+  - v2
+  description: The type of the model which will be trained
+  defaultValue: v1
 - auto: PREDEFINED
   default: false
   defaultValue: 'true'
@@ -65,7 +74,7 @@ args:
   defaultValue: '*'
   description: 'A comma-separated list of email tags values and mapping. The script
     considers only the tags specified in this field. You can map label to another
-    value by using this format: LABEL:MAPPED_LABEL. For example, for 
+    value by using this format: LABEL:MAPPED_LABEL. For example, for
     4 values in email tag: malicious, credentials harvesting, inner communitcation,
     external legit email, unclassified. While training, we want to ignore "unclassified"
     tag, and refer to "credentials harvesting" as "malicious" too. Also, we want to     merge

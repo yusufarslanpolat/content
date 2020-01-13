@@ -104,10 +104,10 @@ def get_data_with_mapped_label(data, labels_mapping, tag_field):
     return new_data, dict(exist_labels_counter), dict(missing_labels_counter)
 
 
-def store_model_in_demisto(model_name, model_override, train_text_data, train_tag_data, confusion_matrix):
-    model = demisto_ml.train_text_classifier(train_text_data, train_tag_data, True)
-    model_data = demisto_ml.encode_model(model)
-    model_labels = demisto_ml.get_model_labels(model)
+def store_model_in_demisto(model_name, model_override, train_text_data, train_tag_data, confusion_matrix, model_type):
+    model = demisto_ml.train_text_classifier(train_text_data, train_tag_data, comperss=True, model_type =model_type)
+    model_data = demisto_ml.encode_model(model, model_type =model_type)
+    model_labels = demisto_ml.get_model_labels(model, model_type =model_type)
 
     res = demisto.executeCommand('createMLModel', {'modelData': model_data,
                                                    'modelName': model_name,
@@ -156,7 +156,15 @@ def set_tag_field(data, tag_fields):
     return data
 
 
-def get_predictions_for_test_set(train_text_data, train_tag_data):
+def get_predictions_for_test_set(train_text_data, train_tag_data, model_type):
+    X_test, X_train, y_test, y_train = split_to_train_and_test_sets(train_tag_data, train_text_data)
+    model = demisto_ml.train_text_classifier(X_train, y_train, model_type=model_type)
+    ft_test_predictions = demisto_ml.predict(model, X_test, model_type=model_type)
+    y_pred = [{y_tuple[0]: y_tuple[1]} for y_tuple in ft_test_predictions]
+    return y_test, y_pred
+
+
+def split_to_train_and_test_sets(train_tag_data, train_text_data):
     X = pd.Series(train_text_data)
     y = pd.Series(train_tag_data)
     train_set_ratio = float(demisto.args()['trainSetRatio'])
@@ -166,13 +174,10 @@ def get_predictions_for_test_set(train_text_data, train_tag_data):
     train_index, test_index = list(skf.split(X, y))[-1]
     X_train, X_test = list(X[train_index]), list(X[test_index])
     y_train, y_test = list(y[train_index]), list(y[test_index])
-    model = demisto_ml.train_text_classifier(X_train, y_train)
-    ft_test_predictions = demisto_ml.predict(model, X_test)
-    y_pred = [{y_tuple[0]: y_tuple[1]} for y_tuple in ft_test_predictions]
-    return y_test, y_pred
+    return X_test, X_train, y_test, y_train
 
 
-def output_model_evaluation(model_name, train_tag_data, train_text_data, y_test, y_pred, res, context_field,
+def output_model_evaluation(model_name, train_tag_data, train_text_data, y_test, y_pred, res, context_field, model_type,
                             store_model=False, model_override=False, human_readable_title=None):
     threshold = float(res[0]['Contents']['threshold'])
     confusion_matrix = json.loads(res[0]['Contents']['csr_matrix_at_threshold'])
@@ -180,7 +185,7 @@ def output_model_evaluation(model_name, train_tag_data, train_text_data, y_test,
     human_readable = res[0]['HumanReadable']
     # store model
     if store_model:
-        store_model_in_demisto(model_name, model_override, train_text_data, train_tag_data, confusion_matrix)
+        store_model_in_demisto(model_name, model_override, train_text_data, train_tag_data, confusion_matrix,model_type)
         human_readable += "\nDone training on {} samples model stored successfully".format(len(train_text_data))
     else:
         human_readable += "\n\nSkip storing model"
@@ -248,16 +253,18 @@ def validate_data_and_labels(data, exist_labels_counter, labels_mapping, missing
 
 
 def main():
-    input = demisto.args()['input']
-    input_type = demisto.args()['inputType']
-    model_name = demisto.args()['modelName']
-    store_model = demisto.args()['storeModel'] == 'true'
-    model_override = demisto.args()['overrideExistingModel'] == 'true'
-    target_accuracy = float(demisto.args()['targetAccuracy'])
-    text_field = demisto.args()['textField']
-    tag_fields = demisto.args()['tagField'].split(",")
-    labels_mapping = get_phishing_map_labels(demisto.args()['phishingLabels'])
-    keyword_min_score = float(demisto.args()['keywordMinScore'])
+    d_args = demisto.args()
+    input = d_args['input']
+    input_type = d_args['inputType']
+    model_type = d_args['modelType'] if 'modelType' in d_args and d_args['modelType'] in ['v1', 'v2'] else 'v2'
+    model_name = d_args['modelName']
+    store_model = d_args['storeModel'] == 'true'
+    model_override = d_args['overrideExistingModel'] == 'true'
+    target_accuracy = float(d_args['targetAccuracy'])
+    text_field = d_args['textField']
+    tag_fields = d_args['tagField'].split(",")
+    labels_mapping = get_phishing_map_labels(d_args['phishingLabels'])
+    keyword_min_score = float(d_args['keywordMinScore'])
     if input_type.endswith("filename"):
         data = read_files_by_name(input, input_type.split("_")[0].strip())
     else:
@@ -272,7 +279,7 @@ def main():
                                                                                     DBOT_TAG_FIELD)
     validate_data_and_labels(data, exist_labels_counter, labels_mapping, missing_labels_counter)
     # print important words for each category
-    find_keywords_bool = 'findKeywords' in demisto.args() and demisto.args()['findKeywords'] == 'true'
+    find_keywords_bool = 'findKeywords' in d_args and d_args['findKeywords'] == 'true'
     if find_keywords_bool:
         try:
             find_keywords(data, DBOT_TAG_FIELD, text_field, keyword_min_score)
@@ -282,9 +289,9 @@ def main():
     train_text_data = map(lambda x: x[text_field], data)
     if len(train_text_data) != len(train_tag_data):
         return_error("Error: data and tag data are different length")
-    y_test, y_pred = get_predictions_for_test_set(train_text_data, train_tag_data)
-    if 'maxBelowThreshold' in demisto.args():
-        target_recall = 1 - float(demisto.args()['maxBelowThreshold'])
+    y_test, y_pred = get_predictions_for_test_set(train_text_data, train_tag_data, model_type=model_type)
+    if 'maxBelowThreshold' in d_args:
+        target_recall = 1 - float(d_args['maxBelowThreshold'])
     else:
         target_recall = 0
     res_threshold = get_ml_model_evaluation(y_test, y_pred, target_accuracy, target_recall, detailed=True)
@@ -296,11 +303,11 @@ def main():
         output_model_evaluation(model_name=model_name, train_tag_data=train_tag_data, train_text_data=train_text_data,
                                 y_test=y_test, y_pred=y_pred, res=res, store_model=False,
                                 model_override=model_override, context_field='DBotPhishingClassifierNoThresh',
-                                human_readable_title=human_readable)
+                                human_readable_title=human_readable, model_type=model_type)
     # show results for the threshold found - last result so it will appear first
     output_model_evaluation(model_name=model_name, train_tag_data=train_tag_data, train_text_data=train_text_data,
                             y_test=y_test, y_pred=y_pred, res=res_threshold, store_model=store_model,
-                            model_override=model_override, context_field='DBotPhishingClassifier')
+                            model_override=model_override, context_field='DBotPhishingClassifier', model_type=model_type)
 
 
 if __name__ in ['__builtin__', '__main__']:
