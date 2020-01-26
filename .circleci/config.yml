@@ -104,10 +104,10 @@ jobs:
 
             if [ "${CHECK_BACKWARD}" = "true" ] ;
               then
-                 demisto-sdk validate -g --post-commit
+                 demisto-sdk validate --post-commit
 
               else
-                 demisto-sdk validate -g --post-commit --no-backward-comp
+                 demisto-sdk validate --post-commit --no-backward-comp
             fi
       - run:
           name: Secrets
