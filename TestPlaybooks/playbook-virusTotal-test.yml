@@ -2757,6 +2757,9 @@ tasks:
       type: regular
       iscommand: false
       brand: ""
+    nexttasks:
+      '#none#':
+      - "95"
     scriptarguments:
       all:
         simple: "yes"
@@ -2833,12 +2836,39 @@ tasks:
     note: false
     timertriggers: []
     ignoreworker: false
+  "95":
+    id: "95"
+    taskid: 6faa3571-e71f-4286-8d37-3aec5bee371d
+    type: regular
+    task:
+      id: 6faa3571-e71f-4286-8d37-3aec5bee371d
+      version: -1
+      name: Sleep
+      description: Sleep for X seconds
+      scriptName: Sleep
+      type: regular
+      iscommand: false
+      brand: ""
+    scriptarguments:
+      seconds:
+        simple: "61"
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 265,
+          "y": 11220
+        }
+      }
+    note: false
+    timertriggers: []
+    ignoreworker: false
 view: |-
   {
     "linkLabelsPosition": {},
     "paper": {
       "dimensions": {
-        "height": 11110,
+        "height": 11265,
         "width": 810,
         "x": 50,
         "y": 50
