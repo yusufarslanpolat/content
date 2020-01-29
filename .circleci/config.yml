@@ -212,6 +212,26 @@ jobs:
                 python ./Tests/scripts/verify_base_branch_for_contribution.py $CIRCLE_BRANCH
             fi
       - run:
+          name: Download Artifacts
+          when: always
+          command: |
+            if [[ $CIRCLE_BRANCH =~ pull/[0-9]+ ]]; then
+              echo "Skipping instance tests for forked PRs"
+              exit 0
+            fi
+            if [ $CIRCLE_NODE_INDEX -ne 0 ] ;
+              then
+                echo 'Skipping - running only in container number 0.'
+                exit 0;
+            fi
+            if ./Tests/scripts/is_ami.sh ;
+              then
+                echo "Using AMI - Not downloading artifacts"
+              else
+                ./Tests/scripts/server_get_artifact.sh $SERVER_CI_TOKEN
+                cp demistoserver.sh ./Tests/scripts/awsinstancetool/ansibleinstall/demistoserver.sh
+            fi
+      - run:
           name: Download Configuration
           when: always
           command: |
