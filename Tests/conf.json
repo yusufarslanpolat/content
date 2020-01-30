@@ -2132,10 +2132,6 @@
         {
             "integrations": "PaloAltoNetworks_PrismaCloudCompute",
             "playbookID": "PaloAltoNetworks_PrismaCloudCompute-Test"
-        },
-        {
-            "playbookID": "Indicator Feed - Test",
-            "fromversion": "5.5.0"
         }
     ],
     "skipped_tests": {
