@@ -276,6 +276,8 @@ def build_search_kwargs(args):
         kwargs_normalsearch['earliest_time'] = args['earliest_time']
     if demisto.get(args, 'latest_time'):
         kwargs_normalsearch['latest_time'] = args['latest_time']
+    if demisto.get(args, 'app'):
+        kwargs_normalsearch['namespace'] = args['app']
     return kwargs_normalsearch
 
 
@@ -381,10 +383,12 @@ def splunk_search_command():
 
 def splunk_job_create_command():
     query = demisto.args()['query']
+    app = demisto.args().get('app', '')
     if not query.startswith('search'):
         query = 'search ' + query
     search_kwargs = {
-        "exec_mode": "normal"
+        "exec_mode": "normal",
+        "namespace": app
     }
     search_job = service.jobs.create(query, **search_kwargs)  # type: ignore
 
