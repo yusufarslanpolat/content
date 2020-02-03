@@ -12,9 +12,9 @@ from time import sleep
 from threading import Thread
 
 from Tests.test_integration import __get_integration_config, __test_integration_instance, \
-    __disable_integrations_instances
+    __disable_integrations_instances, ParallelPrintsManager
 from Tests.test_utils import print_error, print_warning, print_color, LOG_COLORS, run_threads_list
-from Tests.test_content import load_conf_files, extract_filtered_tests, ParallelPrintsManager
+from Tests.test_content import load_conf_files, extract_filtered_tests
 from Tests.test_utils import run_command, get_last_release_version, checked_type, get_yaml
 from Tests.scripts.validate_files import FilesValidator
 from Tests.scripts.constants import YML_INTEGRATION_REGEXES, INTEGRATION_REGEX

@@ -15,7 +15,7 @@ import demisto_client.demisto_api
 from slackclient import SlackClient
 
 from Tests.mock_server import MITMProxy, AMIConnection
-from Tests.test_integration import test_integration, disable_all_integrations
+from Tests.test_integration import ParallelPrintsManager, test_integration, disable_all_integrations
 from Tests.scripts.constants import RUN_ALL_TESTS_FORMAT, FILTER_CONF, PB_Status
 from Tests.test_dependencies import get_used_integrations, get_tests_allocation_for_threads
 from Tests.test_utils import print_color, print_error, print_warning, LOG_COLORS, str2bool, server_version_compare
@@ -85,50 +85,6 @@ class TestsSettings:
     def parse_tests_list_arg(tests_list):
         tests_to_run = tests_list.split(",") if tests_list else []
         return tests_to_run
-
-
-class PrintJob:
-    def __init__(self, message_to_print, print_function_to_execute, message_color=None):
-        self.print_function_to_execute = print_function_to_execute
-        self.message_to_print = message_to_print
-        self.message_color = message_color
-
-    def execute_print(self):
-        if self.message_color:
-            self.print_function_to_execute(self.message_to_print, self.message_color)
-        else:
-            self.print_function_to_execute(self.message_to_print)
-
-
-class ParallelPrintsManager:
-
-    def __init__(self, number_of_threads):
-        self.threads_print_jobs = [[] for i in range(number_of_threads)]
-        self.print_lock = threading.Lock()
-        self.threads_last_update_times = [time.time() for i in range(number_of_threads)]
-
-    def should_update_thread_status(self, thread_index):
-        current_time = time.time()
-        thread_last_update = self.threads_last_update_times[thread_index]
-        return current_time - thread_last_update > 300
-
-    def add_print_job(self, message_to_print, print_function_to_execute, thread_index, message_color=None):
-        if message_color:
-            print_job = PrintJob(message_to_print, print_function_to_execute, message_color)
-        else:
-            print_job = PrintJob(message_to_print, print_function_to_execute)
-        self.threads_print_jobs[thread_index].append(print_job)
-        if self.should_update_thread_status(thread_index):
-            print("Thread {} is still running.".format(thread_index))
-            self.threads_last_update_times[thread_index] = time.time()
-
-    def execute_thread_prints(self, thread_index):
-        self.print_lock.acquire()
-        prints_to_execute = self.threads_print_jobs[thread_index]
-        for print_job in prints_to_execute:
-            print_job.execute_print()
-        self.print_lock.release()
-        self.threads_print_jobs[thread_index] = []
 
 
 class TestsDataKeeper:

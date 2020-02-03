@@ -5,6 +5,7 @@ from pprint import pformat
 import uuid
 import urllib
 import urllib3
+import threading
 import ast
 import requests.exceptions
 from demisto_client.demisto_api.rest import ApiException
@@ -23,6 +24,50 @@ ENTRY_TYPE_ERROR = 4
 
 
 # ----- Functions ----- #
+
+class PrintJob:
+    def __init__(self, message_to_print, print_function_to_execute, message_color=None):
+        self.print_function_to_execute = print_function_to_execute
+        self.message_to_print = message_to_print
+        self.message_color = message_color
+
+    def execute_print(self):
+        if self.message_color:
+            self.print_function_to_execute(self.message_to_print, self.message_color)
+        else:
+            self.print_function_to_execute(self.message_to_print)
+
+
+class ParallelPrintsManager:
+
+    def __init__(self, number_of_threads):
+        self.threads_print_jobs = [[] for i in range(number_of_threads)]
+        self.print_lock = threading.Lock()
+        self.threads_last_update_times = [time.time() for i in range(number_of_threads)]
+
+    def should_update_thread_status(self, thread_index):
+        current_time = time.time()
+        thread_last_update = self.threads_last_update_times[thread_index]
+        return current_time - thread_last_update > 300
+
+    def add_print_job(self, message_to_print, print_function_to_execute, thread_index, message_color=None):
+        if message_color:
+            print_job = PrintJob(message_to_print, print_function_to_execute, message_color)
+        else:
+            print_job = PrintJob(message_to_print, print_function_to_execute)
+        self.threads_print_jobs[thread_index].append(print_job)
+        if self.should_update_thread_status(thread_index):
+            print("Thread {} is still running.".format(thread_index))
+            self.threads_last_update_times[thread_index] = time.time()
+
+    def execute_thread_prints(self, thread_index):
+        self.print_lock.acquire()
+        prints_to_execute = self.threads_print_jobs[thread_index]
+        for print_job in prints_to_execute:
+            print_job.execute_print()
+        self.print_lock.release()
+        self.threads_print_jobs[thread_index] = []
+
 
 # get integration configuration
 def __get_integration_config(client, integration_name, prints_manager, thread_index=0):
