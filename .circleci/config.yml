@@ -46,6 +46,7 @@ jobs:
               echo 'source /home/circleci/project/venv/bin/activate' >> $BASH_ENV
               python --version
               python3 --version
+              echo diff is ${CIRCLE_COMPARE_URL}
       - save_cache:
           paths:
             - venv
@@ -59,6 +60,7 @@ jobs:
           name: Create ID Set
           when: always
           command: |
+            echo diff is ${CIRCLE_COMPARE_URL}
             if [ $CIRCLE_NODE_INDEX -ne 0 ] ;
               then
                 echo "Skipping - running only in container number 0"
