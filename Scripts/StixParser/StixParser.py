@@ -6,6 +6,7 @@ import tempfile
 from datetime import datetime
 
 from stix.core import STIXPackage
+from stix.utils import silence_warnings
 
 """ GLOBAL PARAMS """
 PATTERNS_DICT = {
@@ -344,6 +345,7 @@ def create_new_ioc(data, i, timestamp, pkg_id, ind_id):
         data[i]["timestamp"] = timestamp.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
+@silence_warnings
 def main():
     txt = demisto.args().get("iocXml").encode("utf-8")
     stx = convert_to_json(txt)
