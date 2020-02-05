@@ -13,4 +13,4 @@ Recorded Future's indicators scoring:
 - Between 25 to 90 - Suspicious
 - Between 5 to 25 - Unusual
 
-To access this resource, a valid Recorded Future API token is required.
+To access this resource, a valid Recorded Future API token is required. 
