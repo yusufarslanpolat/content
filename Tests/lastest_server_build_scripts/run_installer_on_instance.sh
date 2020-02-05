@@ -41,7 +41,7 @@ INSTALL_COMMAND_Y="cd ~/installer_files \
     && sudo cp demisto.lic /usr/local/demisto/ \
     && sudo ./installer.sh -- -y -do-not-start-server \
     && sudo cp demisto.conf /etc/demisto.conf \
-    && sudo cp otc.json /var/lib/demisto/onetimeconf.conf \
+    && sudo cp otc.json /var/lib/demisto/otc.conf.json \
     && sudo setcap 'cap_net_bind_service=+ep' /usr/local/demisto/server" # setcap is need for listening on low port (443)
 
 ssh -t ${USER}@${PUBLIC_IP} ${INSTALL_COMMAND_Y}
