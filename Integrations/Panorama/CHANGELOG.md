@@ -1,4 +1,7 @@
 ## [Unreleased]
+
+
+## [20.2.2] - 2020-02-09
 - Fixed an issue in ***panorama-create-rule*** and ***panorama-create-block-rule*** commands.
 - Added the *category* argument to the ***panorama-create-rule*** command.
 
